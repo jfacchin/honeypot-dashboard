@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Honeypot Signup Board</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@600;800;900&family=Onest:wght@400;500;600;700&family=Unbounded:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: glass rail + bento content over a drifting pastel aurora (Pastel Glass guide). */
+:root{
+  --bg:#f7eef5;--bg-2:#efe3f1;--ink:#2b1733;--ink-2:#6d5876;--ink-3:#9a8aa2;--line:rgba(84,40,96,.12);
+  --glass:rgba(255,255,255,.46);--glass-2:rgba(255,255,255,.66);--glass-edge:rgba(255,255,255,.78);
+  --glass-shadow:0 20px 50px -24px rgba(122,44,110,.35),0 2px 6px -2px rgba(122,44,110,.12);
+  --chip:rgba(255,255,255,.7);
+  --pink:#ef5fae;--pink-soft:#ffc3e3;--blue:#8fd0ff;--yellow:#f3ea7a;--green:#a9efc2;--violet:#b9a2ff;
+  --good:#24a364;--warn:#c98a12;--bad:#d43d6a;--wait:#3f8fd6;--skip:#9a8aa2;
+  --g1:#ff8fcf;--g2:#ffd6ec;--g3:#a7dcff;--blob-a:.55;
+  --tile-ink:#2b1733;
+  --f-display:"Unbounded",system-ui,sans-serif;--f-body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"Doto","JetBrains Mono",ui-monospace,monospace;--f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b090f;--bg-2:#141019;--ink:#f6eef8;--ink-2:#c3b4c9;--ink-3:#8a7b91;--line:rgba(255,255,255,.09);
+  --glass:rgba(28,22,34,.5);--glass-2:rgba(40,32,48,.62);--glass-edge:rgba(255,255,255,.12);
+  --glass-shadow:0 24px 60px -30px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.04) inset;
+  --pink:#ff86c6;--pink-soft:#5d2346;--good:#6be3a2;--warn:#ffd66b;--bad:#ff7d9f;--wait:#8fd0ff;--skip:#8a7b91;
+  --chip:rgba(255,255,255,.08);--blob-a:.42;--tile-ink:#f6eef8;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b090f;--bg-2:#141019;--ink:#f6eef8;--ink-2:#c3b4c9;--ink-3:#8a7b91;--line:rgba(255,255,255,.09);
+  --glass:rgba(28,22,34,.5);--glass-2:rgba(40,32,48,.62);--glass-edge:rgba(255,255,255,.12);
+  --glass-shadow:0 24px 60px -30px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.04) inset;
+  --pink:#ff86c6;--pink-soft:#5d2346;--good:#6be3a2;--warn:#ffd66b;--bad:#ff7d9f;--wait:#8fd0ff;--skip:#8a7b91;
+  --chip:rgba(255,255,255,.08);--blob-a:.42;--tile-ink:#f6eef8;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15.5px/1.55 var(--f-body);-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+a{color:inherit}
+h1,h2,h3{font-family:var(--f-display);font-weight:500;letter-spacing:-.01em;line-height:1.05;margin:0;text-wrap:balance}
+h1{font-size:clamp(26px,3.2vw,38px)}h2{font-size:clamp(19px,2vw,24px)}h3{font-size:15px;font-family:var(--f-body);font-weight:600}
+.grad{background:linear-gradient(90deg,var(--pink),#b98cff 50%,#5fb9f3);-webkit-background-clip:text;background-clip:text;color:transparent}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.16em;font-weight:600;color:var(--ink-2)}
+.mono{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
+.num{font-family:var(--f-num);font-weight:800;font-variant-numeric:tabular-nums;line-height:.9}
+.aurora{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:radial-gradient(120% 90% at 50% 0%,var(--bg-2),var(--bg) 70%)}
+.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:var(--blob-a);transition:background 1.2s ease}
+.b1{width:52vmax;height:52vmax;left:-12vmax;top:-16vmax;background:radial-gradient(circle at 40% 40%,var(--g1),transparent 68%);animation:drift1 26s ease-in-out infinite alternate}
+.b2{width:46vmax;height:46vmax;right:-14vmax;top:6vmax;background:radial-gradient(circle,var(--g3),transparent 66%);animation:drift2 31s ease-in-out infinite alternate}
+.b3{width:40vmax;height:40vmax;left:22vmax;bottom:-20vmax;background:radial-gradient(circle,var(--g2),transparent 66%);animation:drift3 23s ease-in-out infinite alternate}
+.b4{width:22vmax;height:22vmax;right:18vmax;bottom:4vmax;background:radial-gradient(circle,var(--yellow),transparent 66%);opacity:calc(var(--blob-a)*.55);animation:drift2 37s ease-in-out infinite alternate-reverse}
+.grain{position:absolute;inset:0;opacity:.05;background-image:radial-gradient(rgba(0,0,0,.6) 1px,transparent 1px);background-size:3px 3px;mix-blend-mode:overlay}
+@keyframes drift1{to{transform:translate(8vmax,6vmax) scale(1.08)}}
+@keyframes drift2{to{transform:translate(-7vmax,8vmax) scale(.94)}}
+@keyframes drift3{to{transform:translate(-6vmax,-7vmax) scale(1.1)}}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(26px) saturate(160%);backdrop-filter:blur(26px) saturate(160%);border:1px solid var(--glass-edge);box-shadow:var(--glass-shadow)}
+.app{position:relative;z-index:1;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:252px minmax(0,1fr);gap:20px;padding-block:20px 110px}
+.rail{position:sticky;top:calc(16px + env(safe-area-inset-top,0px));align-self:start;border-radius:34px;padding:18px 14px;display:flex;flex-direction:column;gap:6px}
+.rail .brand{padding:6px 10px 14px}
+.rail .brand .eyebrow{margin-bottom:4px}
+.rail .brand h1{font-size:19px}
+.rail a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:99px;text-decoration:none;font-weight:500;color:var(--ink-2)}
+.rail a:hover,.rail a:focus-visible{background:var(--chip);color:var(--ink);outline:none}
+.rail a .dot{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 10px currentColor;background:radial-gradient(circle at 35% 35%,#fff,currentColor 70%)}
+.rail .foot{margin-top:auto;padding:14px 10px 4px;display:flex;flex-direction:column;gap:8px}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:99px;padding:9px 14px;cursor:pointer;border:1px solid transparent;transition:transform .2s}
+.btn:hover{transform:translateY(-1px)}.btn:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+.btn.primary{background:var(--ink);color:var(--bg);box-shadow:0 8px 20px -10px rgba(0,0,0,.4)}
+.btn.secondary{background:var(--chip);color:var(--ink);border-color:var(--line)}
+.main{min-width:0;display:flex;flex-direction:column;gap:28px}
+section{scroll-margin-top:24px}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.sec-head p{margin:4px 0 0;color:var(--ink-2);max-width:65ch}
+.status-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
+.live{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:99px;background:var(--chip);border:1px solid var(--line);font-family:var(--f-mono);font-size:11.5px;color:var(--ink)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--skip)}
+.live.on i{background:var(--good);box-shadow:0 0 8px var(--good);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.45}}
+.banner{border-radius:18px;padding:12px 16px;font-size:13.5px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.banner b{font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:186px;gap:16px}
+.tile{position:relative;border-radius:26px;overflow:hidden;padding:18px;display:flex;flex-direction:column;justify-content:space-between;isolation:isolate;color:var(--tile-ink);transition:transform .35s cubic-bezier(.2,.8,.2,1);box-shadow:0 1px 0 rgba(255,255,255,.55) inset,0 0 0 1px rgba(255,255,255,.22) inset,var(--glass-shadow);min-width:0}
+.tile .bg{position:absolute;inset:0;z-index:-1;background:var(--tile-base)}
+.tile .bg::before{content:"";position:absolute;inset:-20%;background:var(--tile-orb);filter:blur(22px);transition:transform 1.2s cubic-bezier(.2,.8,.2,1)}
+.tile:hover{transform:translateY(-4px) scale(1.01)}.tile:hover .bg::before{transform:scale(1.12) rotate(8deg)}
+.tile.wide{grid-column:span 2}.tile.tall{grid-row:span 2}
+.tile .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.tile .label{font-weight:600;font-size:14px}.tile .sub{font-size:12.5px;opacity:.78}
+.tile .idx{font-family:var(--f-mono);font-size:11.5px;opacity:.7}
+.tile .bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.tile .big{font-size:56px}.tile .big small{font:600 13px/1 var(--f-body);margin-left:6px;opacity:.8}
+.dots{display:flex;gap:5px}.dots i{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.22}.dots i.on{opacity:1;box-shadow:0 0 8px currentColor}
+.tile.dark{--tile-ink:#f6eef8}
+.tile.light{--tile-ink:#2b1733}
+.card{border-radius:26px;padding:20px}
+.card.pad-lg{padding:24px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--chip);border:1px solid var(--line);white-space:nowrap}
+.pill i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.pill.YES{color:var(--good)}.pill.NO{color:var(--bad)}.pill.MAYBE{color:var(--warn)}.pill.WAITING{color:var(--wait)}.pill.SKIPPED{color:var(--skip)}
+.pill.likely{color:var(--good)}.pill.risky{color:var(--warn)}.pill.avoid{color:var(--bad)}
+.seg{display:flex;height:10px;border-radius:99px;overflow:hidden;gap:2px;background:transparent}
+.seg b{display:block;height:100%;border-radius:3px;min-width:0}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:9px;height:9px;border-radius:50%}
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar{display:grid;grid-template-columns:minmax(120px,1.1fr) minmax(0,2fr) 44px;gap:12px;align-items:center;font-size:13.5px}
+.bar .track{height:12px;border-radius:99px;background:var(--chip);border:1px solid var(--line);overflow:hidden;position:relative}
+.bar .fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.bar .v{font-family:var(--f-num);font-weight:800;font-size:20px;text-align:right;font-variant-numeric:tabular-nums}
+.bar .name{display:flex;flex-direction:column;min-width:0}.bar .name small{color:var(--ink-3);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.issue{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.issue:first-child{border-top:0;padding-top:0}
+.issue .count{font-family:var(--f-num);font-weight:800;font-size:30px;line-height:1;min-width:44px;text-align:right}
+.issue h3{margin:0 0 2px}.issue p{margin:0;color:var(--ink-2);font-size:13.5px}
+.issue .fix{margin-top:6px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.issue .fix b{font-weight:600;color:var(--ink);flex:none}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:600 13px/1 var(--f-body);padding:9px 14px;border-radius:99px;background:var(--chip);border:1px solid var(--line);color:var(--ink-2);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:transparent}
+.chip:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+.rec{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:start}
+.rec:first-child{border-top:0;padding-top:0}
+.rec .site{font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rec .site a{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);text-decoration:none}
+.rec .site a:hover{color:var(--pink)}
+.rec p{margin:3px 0 0;color:var(--ink-2);font-size:13.5px}
+.rec .why{font-size:12px;color:var(--ink-3);margin-top:3px}
+.rec-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.rec-col h3{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.rec-col h3 .mono{font-size:11px}
+.gap-flag{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--pink)}
+.tablewrap{overflow-x:auto;border-radius:18px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:820px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+td.site{font-weight:600;white-space:nowrap}
+td.note{color:var(--ink-2);min-width:280px;max-width:520px}
+td .mono a{text-decoration:none}
+tr:hover td{background:rgba(255,255,255,.18)}
+:root[data-theme="dark"] tr:hover td{background:rgba(255,255,255,.04)}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.search{font:inherit;font-size:13.5px;padding:9px 14px;border-radius:99px;border:1px solid var(--line);background:var(--chip);color:var(--ink);min-width:200px}
+.search:focus{outline:2px solid var(--pink);outline-offset:1px}
+.tip{position:fixed;z-index:20;pointer-events:none;padding:8px 11px;border-radius:12px;font-size:12.5px;max-width:260px;display:none}
+.tip.show{display:block}
+.tabbar{display:none}
+.readouts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.readout{padding:7px 12px;border-radius:99px;display:flex;align-items:baseline;gap:8px}
+.readout .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-2);font-weight:600}
+.readout .v{font-family:var(--f-num);font-weight:800;font-size:18px;line-height:1}
+.rise{animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{transform:translateY(16px)}to{transform:none}}
+.breathe{animation:breathe 7s ease-in-out infinite alternate}
+@keyframes breathe{to{transform:scale(1.12)}}
+@media (max-width:980px){
+  .app{grid-template-columns:minmax(0,1fr)}.rail{display:none}
+  .tabbar{display:flex;position:fixed;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:15;border-radius:99px;padding:6px;gap:4px;justify-content:space-between}
+  .tabbar a{flex:1;text-align:center;padding:10px 4px;border-radius:99px;font-size:12px;font-weight:600;color:var(--ink-2);text-decoration:none}
+  .tabbar a.on{background:var(--ink);color:var(--bg)}
+}
+@media (max-width:720px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:170px}.two{grid-template-columns:minmax(0,1fr)}
+  .tile .big{font-size:44px}.bar{grid-template-columns:minmax(90px,1fr) minmax(0,1.6fr) 40px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="aurora" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span><span class="grain"></span></div>
+
+<div class="app">
+  <nav class="rail glass" aria-label="Sections">
+    <div class="brand"><div class="eyebrow">SMS honeypot</div><h1>Signup <span class="grad">Board</span></h1></div>
+    <a href="#overview"><span class="dot" style="color:var(--pink)"></span>Overview</a>
+    <a href="#personas"><span class="dot" style="color:var(--blue)"></span>Personas</a>
+    <a href="#issues"><span class="dot" style="color:var(--warn)"></span>What's blocking us</a>
+    <a href="#recommend"><span class="dot" style="color:var(--good)"></span>Next sign-ups</a>
+    <a href="#log"><span class="dot" style="color:var(--violet)"></span>Full log</a>
+    <div class="foot">
+      <button class="btn secondary" id="refresh" type="button">Refresh from Sheets</button>
+      <button class="btn secondary" id="theme" type="button">Theme: System</button>
+      <a class="mono" id="sheetlink" href="https://docs.google.com/spreadsheets/d/1snw2N4wurzZ7fWqs8lklKpGHw6ALYfSa2ef5c3FSglA/edit" target="_blank" rel="noopener" style="padding:6px 10px">Open the Google Sheet ↗</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <section id="overview">
+      <div class="sec-head">
+        <div><div class="eyebrow">Live status</div><h2>Where the honeypot stands</h2><p>Every number comes from the team's Google Sheet. Confirmed means the site accepted the sign-up and showed a thank-you or confirmation.</p></div>
+        <div class="status-line"><span class="live" id="live"><i></i><span id="livetxt">Snapshot · Nov 6, 2026</span></span></div>
+      </div>
+      <div id="banner" hidden></div>
+      <div class="grid" id="kpis"></div>
+    </section>
+
+    <section id="personas">
+      <div class="sec-head"><div><div class="eyebrow">Coverage by persona</div><h2>Who needs more sign-ups</h2><p>Each persona has one research phone number. Fewer confirmed sign-ups means fewer chances for that number to leak, so the lowest bar is the gap to fill first.</p></div></div>
+      <div class="grid" id="ptiles"></div>
+    </section>
+
+    <section id="issues">
+      <div class="sec-head"><div><div class="eyebrow">Failure analysis</div><h2>What's blocking us, and what works</h2><p>Issues are read from the "Did they verify us?" and "What happened" columns. Each one has the fix the team agreed on.</p></div></div>
+      <div class="two">
+        <div class="card glass"><h3 style="margin-bottom:12px">Blockers, most common first</h3><div id="issuelist"></div></div>
+        <div>
+          <div class="card glass" style="margin-bottom:16px"><h3 style="margin-bottom:12px">Success rate by kind of form</h3><div class="bars" id="formbars"></div><div class="mono" style="margin-top:10px">Confirmed ÷ attempted, for each form type with 2+ attempts</div></div>
+          <div class="card glass"><h3 style="margin-bottom:12px">Success rate by how the site verified us</h3><div class="bars" id="verifybars"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="recommend">
+      <div class="sec-head"><div><div class="eyebrow">Recommendations</div><h2>Do these <span class="grad">next</span></h2><p>Sites from each persona's target list that haven't been tried yet, ranked by how likely they are to work given what we've seen. Email-only and "free guide" forms have worked; anything that texts a code is blocked until the Twilio filter is lifted.</p></div></div>
+      <div class="chips" id="recchips" role="group" aria-label="Filter recommendations by persona"></div>
+      <div class="rec-cols" id="reccols" style="margin-top:14px"></div>
+    </section>
+
+    <section id="log">
+      <div class="sec-head"><div><div class="eyebrow">Every attempt</div><h2>Full sign-up log</h2></div></div>
+      <div class="card glass">
+        <div class="filters">
+          <div class="chips" id="logchips" role="group" aria-label="Filter log by result"></div>
+          <input class="search" id="search" type="search" placeholder="Search site or notes…" aria-label="Search log">
+        </div>
+        <div class="tablewrap"><table id="logtable"><thead><tr><th>Date</th><th>Persona</th><th>Site</th><th>Form</th><th>Verified by</th><th>Result</th><th>What happened</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="tabbar glass" aria-label="Sections">
+  <a href="#overview" class="on">Overview</a><a href="#personas">Personas</a><a href="#issues">Issues</a><a href="#recommend">Next</a><a href="#log">Log</a>
+</nav>
+<div class="tip glass" id="tip" role="tooltip"></div>
+
+<script>
+/* ---------- data: snapshot of the Google Sheet (Nov 6, 2026) + live refresh via the Google Sheets connector ---------- */
+const SHEET_ID = "1snw2N4wurzZ7fWqs8lklKpGHw6ALYfSa2ef5c3FSglA";
+const PERSONA_TABS = ["Amy Picle","Adam Stride","Luis Raft","Kaedin Thompson","Lorraine Smith"];
+const PERSONA_META = {
+  "Amy Picle":{cat:"Bargain shopper",phone:"(760) 304-1343",idx:"01",tile:"light",base:"#ffe4f2",orb:"radial-gradient(60% 60% at 70% 70%,#ff6fbd,#ffb4dc 38%,transparent 70%),radial-gradient(50% 50% at 20% 20%,#fff07a,transparent 70%)",color:"#ef5fae"},
+  "Adam Stride":{cat:"Job seeker",phone:"(949) 293-3176",idx:"02",tile:"light",base:"#ddefff",orb:"radial-gradient(at 25% 30%,#8fd0ff,transparent 70%),radial-gradient(at 75% 75%,#a9efc2,transparent 70%),radial-gradient(35% at 80% 20%,#fff07a,transparent 70%)",color:"#4285f4"},
+  "Luis Raft":{cat:"New investor",phone:"(331) 284-7562",idx:"03",tile:"light",base:"#f0f8c8",orb:"radial-gradient(at 60% 70%,#c3ee5a,transparent 70%),radial-gradient(at 25% 25%,#7fe0a5,transparent 70%)",color:"#d9a521"},
+  "Kaedin Thompson":{cat:"Gamer / teen",phone:"(607) 536-9656",idx:"04",tile:"dark",base:"#130e19",orb:"radial-gradient(at 70% 60%,#5fb3f3,transparent 70%),radial-gradient(at 30% 30%,#b98cff,transparent 70%)",color:"#33a853"},
+  "Lorraine Smith":{cat:"Retired senior",phone:"(442) 544-1090",idx:"05",tile:"dark",base:"#120c16",orb:"radial-gradient(at 35% 75%,#ffb36b,transparent 70%),radial-gradient(at 75% 40%,#ef5fae,transparent 70%)",color:"#9959b5"}
+};
+const HEADER = ["Date","Persona","Site","Link","What kind of form","What we gave them","Did we agree to marketing?","Did they verify us?","Did it work?","What happened (plain English)"];
+const SNAPSHOT = {
+"Amy Picle":[
+["2026-10-28","Amy Picle","Gmail (create persona email)","https://accounts.google.com/","Email account sign-up","Name, DOB, phone","n/a","Yes - Google demanded QR-code scan on a real phone","NO","Couldn't create the Gmail. Because we were on a VPN, Google wanted us to scan a QR code with a real phone, which the virtual phone can't do."],
+["2026-10-28","Amy Picle","Proton Mail (create persona email)","https://proton.me/","Email account sign-up","Name","n/a","Yes - verification couldn't be passed from the VM + VPN","YES","Made Apicle90@proton.me from a normal browser window WITHOUT the VPN - there was no way past Proton's verification from inside the secure environment. This is now Amy's main email."],
+["2026-10-28","Amy Picle","Temu","https://www.temu.com/","Shopping account","Email, phone","Not recorded","Yes - texted a code to Amy's number","WAITING","Account created with email, but adding the phone number failed - Temu texted a code and it never arrived in Firestore. Twilio was blocking the code (error 30038)."],
+["2026-10-28","Amy Picle","TapOnIt Deals","https://www.taponitdeals.com/","Text-deals sign-up (phone only)","Phone","Yes - it's a text-alerts service","Yes - texted a code","WAITING","Only needed a phone number, but the confirmation text never arrived in Firestore. Same Twilio OTP block."],
+["2026-11-05","Amy Picle","Slickdeals","https://slickdeals.net/","Deals account","Email, phone","Not recorded","Yes - email link (worked); phone added, expecting a text","YES","Email confirmation worked. Phone number was added to the account - now waiting to see if any texts come."],
+["2026-11-05","Amy Picle","Zulily","https://www.zulily.com/","Shopping account","Email","Not recorded","Yes - email link (worked)","YES","Email confirmation worked. There was no place to add a phone number, so this one is email-only."],
+["2026-11-05","Amy Picle","RetailMeNot","https://www.retailmenot.com/","Coupon account","Email, phone","Not recorded","Yes - email link (worked); phone code never came","MAYBE","Email confirmed fine. Added the phone number but the verification text never came through (Twilio block), so the number may not be saved on the account."],
+["2026-11-05","Amy Picle","AliExpress","https://www.aliexpress.com/","Shopping account","Phone, email","Not recorded","Yes - email (worked); phone code never came","MAYBE","Email sign-up worked. Phone verification code never arrived (Twilio block)."],
+["2026-11-05","Amy Picle","YouGov","https://today.yougov.com/","Paid survey panel","Email, zip code, gender","Not recorded","Yes - email link (worked)","YES","Email confirmation worked. No phone asked."],
+["2026-11-05","Amy Picle","Swagbucks","https://www.swagbucks.com/","Rewards / offers site","Email","Not recorded","Yes - email link (worked)","YES","Email confirmation worked. Used picleamy@gmail.com for this one."]],
+"Adam Stride":[],
+"Luis Raft":[
+["2026-11-05","Luis Raft","US Gold Bureau","https://secure.usgoldbureau.com/how-to-start-investing-in-precious-metals/","\"Send me a free guide\" form","Name, email, phone","Yes - small print says they can call and text us","No","YES","Easiest one. Typed in the info, clicked submit, got a thank-you page. They now have Luis's number."],
+["2026-11-05","Luis Raft","Goldco","https://website.goldcodirect.com/request-free-guide/","\"Send me a free guide\" form","Name, email, phone","Yes - small print","No","NO","Wouldn't accept the phone number - said \"invalid\" before we could even submit. The site checks if a number is a real cell phone; Luis's number is an internet/VoIP number so it got blocked."],
+["2026-11-05","Luis Raft","Augusta Precious Metals","https://www.augustapreciousmetals.com/gold-ira-kit/","\"Send me a free guide\" form","Name, email, phone","Yes - small print","Yes - \"I'm not a robot\" box (passed on its own)","MAYBE","Clicked submit but nothing happened - no thank-you page. Probably rejected the number quietly like Goldco did."],
+["2026-11-05","Luis Raft","Birch Gold Group","https://www.birchgold.com/resources/investment-kit/","\"Send me a free guide\" form","Name, email, phone","Yes - we ticked a box agreeing to texts (up to 6/month) and robocalls","No","YES","Worked. Thank-you page said a salesperson will contact us. This site also lets you join by texting a code to 989898."],
+["2026-11-05","Luis Raft","Noble Gold - email list","https://noblegoldinvestments.com/learn/gold-and-silver-guide/","Newsletter sign-up","Name, email","Yes - small print says they share info with partner companies","No","YES","Joined their email list. No phone number on this one - just email."],
+["2026-11-05","Luis Raft","Noble Gold - free guide","https://noblegoldinvestments.com/learn/gold-and-silver-guide/","\"Send me a free guide\" form","Name, email, phone, said we want to invest $20K+","Yes - we ticked a box agreeing to texts and calls from their \"AI assistant\"","No","YES","Worked. Thank-you page. The consent box specifically mentions an AI assistant texting us."],
+["2026-11-05","Luis Raft","American Hartford Gold","https://www.americanhartfordgold.com/","\"Send me a free guide\" form","Name, email, phone","Yes - the box was ALREADY ticked for us","No","YES","Worked. The \"you can call/text me\" box was pre-checked - we never had to agree. Consent includes AI voice calls."],
+["2026-11-05","Luis Raft","Annuity.org","https://www.annuity.org/","\"Get a quote\" quiz (4 questions then contact info)","Name, email, phone, age 35, zip code, said we have $250-499K saved","Yes - small print says they share with \"trusted partners\"","No","YES","Worked. Asked for MORE info than the gold sites. Small print openly says they pass your info to other companies. Pushed us straight into another company's form (Datalign)."],
+["2026-11-05","Luis Raft","Datalign Advisory","Reached through Annuity.org's thank-you page","\"Match me with an advisor\" quiz (15 screens)","Email, phone, plus a full money profile","Yes - small print says their \"network of partner advisors\" can call/text","YES - they texted a 4-digit code to Luis's number","WAITING","Got to the end and they sent a text code to confirm. Twilio blocked it. The only site so far that checked the phone by texting it."],
+["2026-11-05","Luis Raft","Patriot Gold Group - free guide","https://www.patriotgoldgroup.com/","\"Send me a free guide\" form (pops up when you click the button)","Name, email, phone","Yes - the box was ALREADY ticked for us","No","YES","Worked. Thank-you page said a salesperson will call within 24 hours. Consent box was pre-checked."],
+["2026-11-05","Luis Raft","Patriot Gold Group - email list","https://www.patriotgoldgroup.com/","Newsletter sign-up (bottom of page)","Email","Yes - small print","No","YES","Joined their email list. Email only."],
+["2026-11-05","Luis Raft","Monetary Gold","https://www.monetarygold.com/","\"Send me a free guide\" form","Name, email, phone","Yes - we ticked a box agreeing to texts","Yes - \"I'm not a robot\" box that needs a human click","WAITING","Filled everything in but stopped at the \"I'm not a robot\" checkbox (a person needs to click it)."],
+["2026-11-05","Luis Raft","Lear Capital","https://www.learcapital.com/","\"Send me a free guide\" form (click the orange bar at the bottom)","Name, email, phone, picked \"Afternoon\" for call time","Yes - the box was ALREADY ticked for us","Yes - Cloudflare \"verify you are human\" box (a person clicked it)","YES","Worked after a person ticked the human-check box. Consent box was pre-checked and mentions AI voice calls."],
+["2026-11-05","Luis Raft","Market Rebellion","https://www.marketrebellion.com/getstarted","Trading education","","","","SKIPPED","No sign-up form on the page - it just tells you to call them."],
+["2026-11-05","Luis Raft","Capper's Picks","https://www.capperspicks.com/","Sports betting tips","","","","SKIPPED","There's a \"get free picks\" popup but our browser's privacy settings blocked it from loading."],
+["2026-11-05","Luis Raft","Advantage Gold","https://www.advantagegold.com/gold-ira-beginners-guide/","Gold IRA","","","","SKIPPED","Just a long article, no form found."],
+["2026-11-05","Luis Raft","Oxford Gold Group","https://www.oxfordgoldgroup.com/","Gold IRA","","","","SKIPPED","The website has been taken over - instead of a gold company it now shows UK gambling ads."]],
+"Kaedin Thompson":[],
+"Lorraine Smith":[]
+};
+/* Target sites per persona (from the Personas tab) with what we expect each sign-up to require. */
+const TARGETS = {
+"Amy Picle":["Temu","Shein","Rakuten","RetailMeNot","BradsDeals","Slickdeals","OfferUp","Mercari"],
+"Adam Stride":["PostJobFree","JobSpider","Craigslist","Debt.com","CreditRepair.com","ZipRecruiter","Indeed","FreeAdsTime"],
+"Luis Raft":["Airdrops.io","AirdropAlert","CoinSniper","ICOdrops","Bovada","BetOnline","Investing.com","SeekingAlpha"],
+"Kaedin Thompson":["CoolROM","EmulatorGames","FitGirl-Repacks","Mega4Up","FileFactory","Roblox","ModDB","NexusMods"],
+"Lorraine Smith":["PCH","GrandCaribbeanCruise","SelectQuote","eHealthInsurance","SeniorMatch","OurTime","LendingTree","QuoteWizard"]
+};
+const UNIVERSAL = ["Networx","HomeAdvisor","SalesSpider","USNetAds"];
+/* Expected requirement per site: verify = email | none | sms | captcha | mixed; risk = likely | risky | avoid */
+const KB = {
+"Shein":{url:"https://www.shein.com/",form:"Shopping account",verify:"email",risk:"likely",note:"Email sign-up; the phone number is an optional field on the profile, so add it after."},
+"Rakuten":{url:"https://www.rakuten.com/",form:"Cashback account",verify:"email",risk:"likely",note:"Email only to join."},
+"BradsDeals":{url:"https://www.bradsdeals.com/",form:"Newsletter",verify:"none",risk:"likely",note:"Deal-alert email list; no account needed."},
+"OfferUp":{url:"https://offerup.com/",form:"Marketplace account",verify:"sms",risk:"risky",note:"Offers phone verification by text at sign-up. It's optional, so skip that step and keep the email account."},
+"Mercari":{url:"https://www.mercari.com/",form:"Marketplace account",verify:"sms",risk:"avoid",note:"Requires a mobile number and is known to reject VoIP numbers."},
+"Temu":{url:"https://www.temu.com/",form:"Shopping account",verify:"sms",risk:"risky",note:"Email account works; adding the phone needs a text code."},
+"RetailMeNot":{url:"https://www.retailmenot.com/",form:"Coupon account",verify:"email",risk:"likely",note:"Email link to confirm."},
+"Slickdeals":{url:"https://slickdeals.net/",form:"Deals account",verify:"email",risk:"likely",note:"Email link to confirm; phone can be added without a code."},
+"PostJobFree":{url:"https://www.postjobfree.com/",form:"Job-seeker profile",verify:"email",risk:"likely",note:"Resume profile with email and phone on it; no code."},
+"JobSpider":{url:"https://www.jobspider.com/",form:"Job-seeker profile",verify:"email",risk:"likely",note:"Old-school job board; resume with contact details, email confirm only."},
+"Craigslist":{url:"https://www.craigslist.org/",form:"Classifieds account",verify:"sms",risk:"risky",note:"Email account is fine; posting in Gigs or Resumes usually asks for a phone verification call or text."},
+"Debt.com":{url:"https://www.debt.com/",form:"\"Get a free quote\" lead form",verify:"none",risk:"likely",note:"Lead-gen form: name, email, phone, debt amount. Same pattern as the gold-IRA forms that worked."},
+"CreditRepair.com":{url:"https://www.creditrepair.com/",form:"\"Free consultation\" lead form",verify:"none",risk:"likely",note:"Lead-gen form with phone. Expect calls and texts."},
+"ZipRecruiter":{url:"https://www.ziprecruiter.com/",form:"Job-seeker account",verify:"email",risk:"likely",note:"Email confirm; phone goes on the profile. Heavy on job-alert texts if you opt in."},
+"Indeed":{url:"https://www.indeed.com/",form:"Job-seeker account",verify:"email",risk:"likely",note:"Email code to confirm; phone optional on the resume."},
+"FreeAdsTime":{url:"https://www.freeadstime.org/",form:"Classifieds account",verify:"email",risk:"likely",note:"Free classifieds; email account, phone shown on the ad."},
+"Airdrops.io":{url:"https://airdrops.io/",form:"Directory (links to airdrop forms)",verify:"none",risk:"likely",note:"The directory itself has a newsletter. Individual airdrop entries vary; pick ones that take email + phone and don't need a wallet."},
+"AirdropAlert":{url:"https://airdropalert.com/",form:"Newsletter / directory",verify:"email",risk:"likely",note:"Newsletter sign-up; email only."},
+"CoinSniper":{url:"https://coinsniper.net/",form:"Crypto listings account",verify:"email",risk:"likely",note:"Account with email; no phone needed."},
+"ICOdrops":{url:"https://icodrops.com/",form:"Newsletter",verify:"email",risk:"likely",note:"Email newsletter."},
+"Bovada":{url:"https://www.bovada.lv/",form:"Betting account",verify:"email",risk:"risky",note:"Account creation takes email + phone + DOB + address. Stop before any deposit or ID upload."},
+"BetOnline":{url:"https://www.betonline.ag/",form:"Betting account",verify:"email",risk:"risky",note:"Same as Bovada: create the account, never deposit."},
+"Investing.com":{url:"https://www.investing.com/",form:"News account",verify:"email",risk:"likely",note:"Email confirm; newsletters and alerts."},
+"SeekingAlpha":{url:"https://seekingalpha.com/",form:"News account",verify:"email",risk:"likely",note:"Email confirm."},
+"CoolROM":{url:"https://coolrom.com/",form:"Download site",verify:"none",risk:"avoid",note:"No sign-up form; it's a download site. Don't download anything."},
+"EmulatorGames":{url:"https://www.emulatorgames.net/",form:"Download site",verify:"none",risk:"avoid",note:"No sign-up form. Don't download."},
+"FitGirl-Repacks":{url:"https://fitgirl-repacks.site/",form:"Download site",verify:"none",risk:"avoid",note:"No sign-up form and a malware risk. Don't download."},
+"Mega4Up":{url:"https://mega4up.org/",form:"File host",verify:"email",risk:"risky",note:"Email account for uploads. Don't download files."},
+"FileFactory":{url:"https://www.filefactory.com/",form:"File host account",verify:"email",risk:"likely",note:"Email account; no phone."},
+"Roblox":{url:"https://www.roblox.com/",form:"Game account + third-party \"free Robux\" promo forms",verify:"none",risk:"likely",note:"The Roblox account needs no phone. The sketchy part is the third-party \"free Robux\" forms that ask for username + phone - those are the ones to fill."},
+"ModDB":{url:"https://www.moddb.com/",form:"Community account",verify:"email",risk:"likely",note:"Email confirm."},
+"NexusMods":{url:"https://www.nexusmods.com/",form:"Community account",verify:"email",risk:"likely",note:"Email confirm; no phone."},
+"PCH":{url:"https://www.pch.com/",form:"Sweepstakes entry",verify:"email",risk:"likely",note:"Email + full mailing address. Classic lead-gen; expect a lot of mail and texts."},
+"GrandCaribbeanCruise":{url:"https://www.grandcaribbeancruise.com/",form:"\"Claim your cruise\" lead form",verify:"none",risk:"likely",note:"Name + phone lead form. Known for aggressive follow-up calls."},
+"SelectQuote":{url:"https://www.selectquote.com/",form:"Insurance quote lead form",verify:"none",risk:"likely",note:"Name, DOB, zip, phone. Same lead-gen pattern that worked for Luis."},
+"eHealthInsurance":{url:"https://www.ehealthinsurance.com/",form:"Insurance quote form",verify:"none",risk:"likely",note:"Zip + DOB + phone quote form."},
+"SeniorMatch":{url:"https://www.seniormatch.com/",form:"Dating account",verify:"email",risk:"likely",note:"Email confirm; profile with age and city."},
+"OurTime":{url:"https://www.ourtime.com/",form:"Dating account",verify:"email",risk:"risky",note:"Email account; may ask to verify by text later. Skip that step."},
+"LendingTree":{url:"https://www.lendingtree.com/",form:"Loan quote form",verify:"sms",risk:"risky",note:"Quote form often ends with a text code and sometimes asks for SSN. Stop at SSN."},
+"QuoteWizard":{url:"https://quotewizard.com/",form:"Insurance quote lead form",verify:"none",risk:"likely",note:"Zip + DOB + phone. Sells leads to several insurers."},
+"Networx":{url:"https://www.networx.com/",form:"Contractor quote lead form",verify:"none",risk:"likely",note:"Project + zip + phone. Lead-gen; expect calls."},
+"HomeAdvisor":{url:"https://www.homeadvisor.com/",form:"Contractor quote lead form",verify:"sms",risk:"risky",note:"Usually texts a code to confirm the phone."},
+"SalesSpider":{url:"https://www.salesspider.com/",form:"Business classifieds account",verify:"email",risk:"likely",note:"Email account; phone on the listing."},
+"USNetAds":{url:"https://www.usnetads.com/",form:"Classifieds account",verify:"email",risk:"likely",note:"Free classifieds; email account."}
+};
+const VERIFY_LABEL={email:"Email link / code",none:"No verification",sms:"Text-message code",captcha:"Human check (CAPTCHA)",mixed:"Email + text code",qr:"Google device check",other:"Other"};
+
+/* ---------- issue taxonomy ---------- */
+const ISSUES=[
+ {id:"sms",title:"Text code never arrived (Twilio filter)",test:r=>/twilio|30038|code never|never arrived|never came|texted a code|texted a 4/i.test(r.verify+" "+r.note)&&r.result!=="YES",why:"Twilio blocks incoming one-time codes on our numbers (error 30038). Any site that texts a code to confirm the phone gets stuck.",fix:"Whoever owns the Twilio account files a support ticket asking to lift the inbound-OTP filter. Until then, prefer sites that don't text a code."},
+ {id:"voip",title:"Site rejected the number as VoIP",test:r=>/invalid|voip|not a real cell|rejected the number/i.test(r.note)&&r.result!=="YES",why:"Some lead buyers run a live carrier check and refuse internet (VoIP) numbers like our Twilio ones.",fix:"Log it and move on. If the sponsor wants coverage of these sites, a real prepaid SIM per persona is the only way."},
+ {id:"captcha",title:"Needs a human to click a CAPTCHA",test:r=>/not a robot|cloudflare|recaptcha|verify you are human|human-check/i.test(r.verify+" "+r.note)&&r.result!=="YES",why:"The form was filled, but a person has to tick the box before it submits.",fix:"Do the click by hand. These can't be automated; budget a minute each."},
+ {id:"qr",title:"Google wanted a real phone (QR scan)",test:r=>/qr/i.test(r.verify+" "+r.note),why:"Signing into Google from a VPN on a new device triggers a QR check the virtual phone can't pass.",fix:"Create persona emails outside the VM without the VPN, then use them inside."},
+ {id:"vmverify",title:"Email provider blocked sign-up from the VM",test:r=>/couldn't be passed from the vm|without the vpn/i.test(r.verify+" "+r.note)&&!/qr/i.test(r.note),why:"Proton and others refuse account creation through a VPN.",fix:"Make the email account in a normal browser window, then log in from the VM."},
+ {id:"noform",title:"No sign-up form on the page",test:r=>/no sign-up form|no form found|nothing to fill|just a long article|download site/i.test(r.note),why:"Some target sites are articles, directories or download pages with nothing to submit.",fix:"Skip. Swap in a similar site that has a form."},
+ {id:"privacy",title:"Our browser's privacy setting hid the form",test:r=>/privacy settings blocked|tracking protection|strict/i.test(r.note),why:"Firefox Strict mode blocks some third-party sign-up popups.",fix:"For that one site, set Enhanced Tracking Protection to Standard, submit, then set it back."},
+ {id:"hijack",title:"Website taken over by spam",test:r=>/taken over|hijack|gambling ads/i.test(r.note),why:"The company's old domain now serves unrelated spam.",fix:"Skip, and mention it in the report as an example of where numbers end up."},
+ {id:"unknown",title:"Submitted, no confirmation shown",test:r=>r.result==="MAYBE"&&!/twilio|never came|never arrived/i.test(r.note),why:"The site took the form but never said thanks. It may have quietly rejected the number.",fix:"Log as MAYBE. If any texts arrive at that number later, that's your confirmation."}
+];
+function classifyVerify(r){const t=(r.verify+" "+r.note).toLowerCase();
+  if(/qr/.test(t))return"qr";
+  const sms=/texted a code|text code|sms|phone code|never came|never arrived|30038|twilio/.test(t);
+  const email=/email link|email \(worked\)|email confirm|email code/.test(t);
+  if(sms&&email)return"mixed";if(sms)return"sms";
+  if(/not a robot|cloudflare|recaptcha|human/.test(t))return"captcha";
+  if(email)return"email";
+  if(/^no\b/.test(r.verify.trim().toLowerCase())||r.verify.trim()===""||/^n\/a/.test(r.verify.toLowerCase()))return"none";
+  return"other";}
+function formGroup(f){const t=f.toLowerCase();
+  if(/free guide|lead form|quote|consult|investor kit/.test(t))return"Lead-gen form (free guide / quote)";
+  if(/newsletter|email list|text-deals/.test(t))return"Newsletter / alerts list";
+  if(/quiz|match me/.test(t))return"Multi-step quiz";
+  if(/account|panel|rewards|profile/.test(t))return"Account sign-up";
+  if(t==="")return"Unknown";return"Other page";}
+
+/* ---------- state ---------- */
+const state={rows:[],source:"snapshot",updated:"Nov 6, 2026",recFilter:"all",logFilter:"ALL",q:"",mcp:null,err:null};
+function normalize(persona,values){const out=[];(values||[]).forEach((v,i)=>{if(i===0&&String(v[0]).toLowerCase()==="date")return;if(!v||!v[2])return;
+  const g=k=>String(v[k]??"").trim();const dt=g(0);const d0=/^\d{4}-\d{2}-\d{2}T/.test(dt)?dt.slice(0,10):dt;out.push({date:d0,persona:g(1)||persona,site:g(2),link:g(3),form:g(4),gave:g(5),consent:g(6),verify:g(7),result:(g(8)||"MAYBE").toUpperCase(),note:g(9)});});return out;}
+function loadSnapshot(){state.rows=PERSONA_TABS.flatMap(p=>normalize(p,[HEADER,...SNAPSHOT[p]]));}
+const by=(arr,fn)=>arr.reduce((m,x)=>{const k=fn(x);(m[k]=m[k]||[]).push(x);return m},{});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const host=u=>{try{return new URL(u).host.replace(/^www\./,"")}catch{return""}};
+const RES_COLOR={YES:"var(--good)",MAYBE:"var(--warn)",WAITING:"var(--wait)",NO:"var(--bad)",SKIPPED:"var(--skip)"};
+const RES_ORDER=["YES","MAYBE","WAITING","NO","SKIPPED"];
+const RES_WORD={YES:"Confirmed",MAYBE:"Unconfirmed",WAITING:"Needs a human step",NO:"Rejected",SKIPPED:"No form"};
+
+/* ---------- renderers ---------- */
+function segBar(counts,total){return`<div class="seg" role="img" aria-label="${RES_ORDER.map(k=>`${counts[k]||0} ${RES_WORD[k]}`).join(", ")}">${RES_ORDER.map(k=>counts[k]?`<b style="width:${counts[k]/total*100}%;background:${RES_COLOR[k]}" data-tip="${counts[k]} ${RES_WORD[k]}"></b>`:"").join("")}</div>`;}
+function dots(n,of){const lit=of?Math.round(n/of*10):0;return`<div class="dots" aria-label="${n} of ${of}">${Array.from({length:10},(_,i)=>`<i class="${i<lit?"on":""}"></i>`).join("")}</div>`;}
+
+function renderKpis(){const rows=state.rows,c=by(rows,r=>r.result);const n=k=>(c[k]||[]).length;
+  const sites=new Set(rows.map(r=>r.site.replace(/ - .*$/,"").toLowerCase())).size;
+  const blocked=rows.filter(r=>ISSUES[0].test(r)).length;
+  const tiles=[
+   {cls:"wide light",base:"#ffe4f2",orb:PERSONA_META["Amy Picle"].orb,label:"Confirmed sign-ups",sub:"Site accepted the form and said thanks",idx:"01",big:n("YES"),unit:`of ${rows.length}`,dots:dots(n("YES"),rows.length)},
+   {cls:"light",base:"#def6ea",orb:"radial-gradient(at 30% 70%,#6fe0a0,transparent 70%),radial-gradient(at 80% 30%,#8fd0ff,transparent 70%)",label:"Unique sites",sub:"Tried at least once",idx:"02",big:sites,unit:"sites"},
+   {cls:"dark breathe-host",base:"#0e0a12",orb:"radial-gradient(at 50% 85%,#f3ea7a,transparent 70%),radial-gradient(at 45% 55%,#ef5fae,transparent 70%),radial-gradient(at 60% 20%,#8a6cff,transparent 70%)",label:"Blocked by Twilio",sub:"Text codes that never arrived",idx:"03",big:blocked,unit:"stuck"},
+   {cls:"light",base:"#f4f0ee",orb:"radial-gradient(at 50% 45%,#fff,transparent 70%),radial-gradient(at 25% 80%,#d9cff8,transparent 70%),radial-gradient(at 80% 20%,#ffd3e9,transparent 70%)",label:"Waiting on a person",sub:"CAPTCHA or code to enter",idx:"04",big:n("WAITING"),unit:"open"},
+   {cls:"light",base:"#f0f8c8",orb:PERSONA_META["Luis Raft"].orb,label:"Rejected or unconfirmed",sub:"NO + MAYBE",idx:"05",big:n("NO")+n("MAYBE"),unit:"forms"},
+   {cls:"wide dark",base:"#130e19",orb:PERSONA_META["Kaedin Thompson"].orb,label:"Personas with zero sign-ups",sub:"These numbers have no exposure yet",idx:"06",big:PERSONA_TABS.filter(p=>!rows.some(r=>r.persona===p&&r.result==="YES")).length,unit:"of 5",extra:`<div class="sub" style="margin-top:4px">${PERSONA_TABS.filter(p=>!rows.some(r=>r.persona===p&&r.result==="YES")).join(" · ")||"Everyone has at least one"}</div>`}
+  ];
+  document.getElementById("kpis").innerHTML=tiles.map((t,i)=>`<div class="tile ${t.cls} rise" style="--tile-base:${t.base};--tile-orb:${t.orb};animation-delay:${i*.05}s"><div class="bg"></div>
+   <div class="top"><div><div class="label">${t.label}</div><div class="sub">${t.sub}</div></div><div class="idx">${t.idx}</div></div>
+   <div class="bottom"><div><div class="big num">${t.big}<small>${t.unit}</small></div>${t.extra||""}</div>${t.dots||""}</div></div>`).join("");}
+
+function renderPersonas(){const rows=state.rows;const data=PERSONA_TABS.map(p=>{const pr=rows.filter(r=>r.persona===p);const c=by(pr,r=>r.result);const yes=(c.YES||[]).length;
+   const tried=new Set(pr.map(r=>r.site.split(" - ")[0].split(" (")[0].toLowerCase()));const targets=TARGETS[p]||[];const covered=targets.filter(t=>[...tried].some(s=>s.includes(t.toLowerCase().split(".")[0])||t.toLowerCase().includes(s.split(" ")[0]))).length;
+   return{p,pr,c,yes,covered,targets:targets.length};});
+  const minYes=Math.min(...data.map(d=>d.yes));
+  document.getElementById("ptiles").innerHTML=data.map((d,i)=>{const m=PERSONA_META[d.p];const gap=d.yes===minYes;return`<div class="tile ${m.tile} ${i<2?"wide":""} rise" style="--tile-base:${m.base};--tile-orb:${m.orb};animation-delay:${i*.05}s"><div class="bg"></div>
+   <div class="top"><div><div class="label">${d.p}</div><div class="sub">${m.cat} · ${m.phone}</div></div><div class="idx">${m.idx}${gap?` <span class="gap-flag">fill this gap</span>`:""}</div></div>
+   <div><div class="bottom"><div class="big num">${d.yes}<small>confirmed</small></div><div style="text-align:right"><div class="mono" style="color:inherit;opacity:.75">${d.pr.length} tried · ${d.covered}/${d.targets} targets</div>${dots(d.covered,d.targets)}</div></div>
+   ${d.pr.length?`<div style="margin-top:10px">${segBar(Object.fromEntries(RES_ORDER.map(k=>[k,(d.c[k]||[]).length])),d.pr.length)}</div>`:`<div class="sub" style="margin-top:10px">No attempts logged yet</div>`}</div></div>`;}).join("")+
+  `<div class="card glass wide rise" style="grid-column:span 2;display:flex;flex-direction:column;justify-content:center;gap:8px;animation-delay:.3s"><div class="eyebrow">Legend</div><div class="legend">${RES_ORDER.map(k=>`<span><i style="background:${RES_COLOR[k]}"></i>${RES_WORD[k]} (${k})</span>`).join("")}</div><div class="mono">Dots = target sites covered. The flagged persona has the fewest confirmed sign-ups.</div></div>`;}
+
+function rankedBars(el,groups,colorFn){const items=Object.entries(groups).map(([k,v])=>({k,yes:v.filter(r=>r.result==="YES").length,n:v.length})).filter(x=>x.n>=2).sort((a,b)=>b.yes/b.n-a.yes/a.n||b.n-a.n);
+  el.innerHTML=items.length?items.map(x=>{const pct=Math.round(x.yes/x.n*100);return`<div class="bar"><div class="name"><span>${esc(x.k)}</span><small>${x.yes} of ${x.n} confirmed</small></div><div class="track" data-tip="${esc(x.k)}: ${x.yes} confirmed of ${x.n} attempts (${pct}%)"><div class="fill" style="width:${pct}%;background:${colorFn(pct)}"></div></div><div class="v">${pct}<span style="font:600 11px var(--f-body)">%</span></div></div>`}).join(""):`<div class="mono">Not enough data yet (needs 2+ attempts per type)</div>`;}
+const rateColor=p=>p>=70?"var(--good)":p>=40?"var(--warn)":"var(--bad)";
+function renderIssues(){const rows=state.rows;const found=ISSUES.map(is=>({...is,rows:rows.filter(is.test)})).filter(x=>x.rows.length).sort((a,b)=>b.rows.length-a.rows.length);
+  document.getElementById("issuelist").innerHTML=found.length?found.map(x=>`<div class="issue"><div class="count" style="color:${x.id==="sms"?"var(--bad)":x.id==="captcha"?"var(--wait)":"var(--warn)"}">${x.rows.length}</div><div><h3>${x.title}</h3><p>${x.why}</p><div class="fix"><b>Fix →</b><span>${x.fix}</span></div><div class="mono" style="margin-top:6px">${x.rows.map(r=>esc(r.site.split(" - ")[0])).join(" · ")}</div></div></div>`).join(""):`<div class="mono">No blockers logged. Nice.</div>`;
+  rankedBars(document.getElementById("formbars"),by(rows.filter(r=>r.result!=="SKIPPED"),r=>formGroup(r.form)),rateColor);
+  rankedBars(document.getElementById("verifybars"),by(rows.filter(r=>r.result!=="SKIPPED"),r=>VERIFY_LABEL[classifyVerify(r)]),rateColor);}
+
+function observedRate(){const g=by(state.rows.filter(r=>r.result!=="SKIPPED"),r=>classifyVerify(r));const out={};for(const k in g){out[k]={yes:g[k].filter(r=>r.result==="YES").length,n:g[k].length};}return out;}
+function recommend(){const rates=observedRate();const tried=by(state.rows,r=>r.persona);const score=(kb)=>{const base={likely:3,risky:1,avoid:0}[kb.risk];const o=rates[kb.verify==="none"?"none":kb.verify];const obs=o&&o.n>=2?o.yes/o.n*2:(kb.verify==="sms"?0:1);return base+obs;};
+  const per={};PERSONA_TABS.forEach(p=>{const done=new Set((tried[p]||[]).map(r=>r.site.split(" - ")[0].split(" (")[0].toLowerCase()));
+    const list=[...(TARGETS[p]||[]),...UNIVERSAL].filter(s=>![...done].some(d=>d.includes(s.toLowerCase().split(".")[0].split("-")[0])||s.toLowerCase().includes(d.split(" ")[0])))
+      .map(s=>{const kb=KB[s]||{url:"",form:"Unknown",verify:"other",risk:"risky",note:"Not reviewed yet."};const o=rates[kb.verify];return{s,kb,score:score(kb),obs:o&&o.n>=2?`${VERIFY_LABEL[kb.verify]}: ${o.yes} of ${o.n} worked so far`:null};})
+      .sort((a,b)=>b.score-a.score);per[p]=list;});return per;}
+function renderRecs(){const per=recommend();const yesCount=p=>state.rows.filter(r=>r.persona===p&&r.result==="YES").length;const order=[...PERSONA_TABS].sort((a,b)=>yesCount(a)-yesCount(b));
+  const chips=document.getElementById("recchips");chips.innerHTML=[["all","All personas"],...order.map(p=>[p,p])].map(([v,l])=>`<button class="chip" type="button" data-v="${v}" aria-pressed="${state.recFilter===v}">${l}</button>`).join("");
+  chips.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{state.recFilter=b.dataset.v;renderRecs();});
+  const show=state.recFilter==="all"?order:[state.recFilter];
+  document.getElementById("reccols").innerHTML=show.map(p=>{const list=per[p];const top=state.recFilter==="all"?list.slice(0,5):list;return`<div class="card glass rec-col rise"><h3><span>${p} <span class="mono" style="margin-left:6px">${yesCount(p)} confirmed</span></span>${order[0]===p?`<span class="gap-flag">biggest gap</span>`:""}</h3>
+   ${top.length?top.map(x=>`<div class="rec"><div><div class="site">${esc(x.s)}${x.kb.url?` <a href="${x.kb.url}" target="_blank" rel="noopener">${host(x.kb.url)} ↗</a>`:""}</div><p>${esc(x.kb.form)} — ${esc(x.kb.note)}</p>${x.obs?`<div class="why">${esc(x.obs)}</div>`:""}</div><span class="pill ${x.kb.risk}"><i></i>${x.kb.risk==="likely"?"Likely to work":x.kb.risk==="risky"?"Risky":"Avoid"}</span></div>`).join(""):`<div class="mono">Every target site has been tried. Add more to the Personas tab.</div>`}
+   ${state.recFilter==="all"&&list.length>5?`<div class="mono" style="margin-top:10px">+${list.length-5} more — filter to ${p.split(" ")[0]} to see all</div>`:""}</div>`;}).join("");}
+
+function renderLog(){const chips=document.getElementById("logchips");const opts=["ALL",...RES_ORDER];chips.innerHTML=opts.map(k=>`<button class="chip" type="button" data-v="${k}" aria-pressed="${state.logFilter===k}">${k==="ALL"?"All":RES_WORD[k]}</button>`).join("");
+  chips.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{state.logFilter=b.dataset.v;renderLog();});
+  const q=state.q.toLowerCase();const rows=state.rows.filter(r=>(state.logFilter==="ALL"||r.result===state.logFilter)&&(!q||(r.site+" "+r.note+" "+r.persona+" "+r.form).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));
+  document.querySelector("#logtable tbody").innerHTML=rows.length?rows.map(r=>`<tr><td class="mono">${esc(r.date)}</td><td>${esc(r.persona)}</td><td class="site">${esc(r.site)}${/^https?:/.test(r.link)?`<div class="mono"><a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(host(r.link))} ↗</a></div>`:""}</td><td>${esc(r.form)||"—"}</td><td>${esc(VERIFY_LABEL[classifyVerify(r)])}</td><td><span class="pill ${r.result}"><i></i>${RES_WORD[r.result]||r.result}</span></td><td class="note">${esc(r.note)}</td></tr>`).join(""):`<tr><td colspan="7" class="mono">Nothing matches.</td></tr>`;}
+
+function renderAll(){renderKpis();renderPersonas();renderIssues();renderRecs();renderLog();}
+
+/* ---------- tooltips ---------- */
+const tip=document.getElementById("tip");
+document.addEventListener("mouseover",e=>{const t=e.target.closest("[data-tip]");if(!t)return;tip.textContent=t.dataset.tip;tip.classList.add("show");});
+document.addEventListener("mousemove",e=>{if(!tip.classList.contains("show"))return;const x=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-12),y=Math.min(e.clientY+16,innerHeight-tip.offsetHeight-12);tip.style.left=x+"px";tip.style.top=y+"px";});
+document.addEventListener("mouseout",e=>{if(e.target.closest("[data-tip]"))tip.classList.remove("show");});
+
+/* ---------- theme + nav ---------- */
+const themes=["system","light","dark"];let themeIdx=0;try{themeIdx=Math.max(0,themes.indexOf(localStorage.getItem("hp-theme")||"system"));}catch{}
+function applyTheme(){const t=themes[themeIdx];if(t==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t);document.getElementById("theme").textContent="Theme: "+t[0].toUpperCase()+t.slice(1);try{localStorage.setItem("hp-theme",t);}catch{}}
+document.getElementById("theme").onclick=()=>{themeIdx=(themeIdx+1)%3;applyTheme();};applyTheme();
+document.getElementById("search").addEventListener("input",e=>{state.q=e.target.value;renderLog();});
+const secs=[...document.querySelectorAll("main section")];const tabs=[...document.querySelectorAll(".tabbar a")];
+new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting)tabs.forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+en.target.id));});},{rootMargin:"-40% 0px -55% 0px"}).observe&&secs.forEach(s=>new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting)tabs.forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+en.target.id));});},{rootMargin:"-40% 0px -55% 0px"}).observe(s));
+
+/* ---------- live data: Apps Script endpoint (runs as the sheet owner; the sheet itself stays private) ---------- */
+const ENDPOINT="https://script.google.com/macros/s/AKfycbzoEJNwfpx8myat-oxkobjLLK0jN5yoMfnm_mRRNXCQucbEGAyq46EfmOao2aAQmkFz/exec";
+function setBanner(html,tone){const b=document.getElementById("banner");if(!html){b.hidden=true;return;}b.hidden=false;b.className="banner glass";b.style.borderColor=tone==="bad"?"var(--bad)":tone==="warn"?"var(--warn)":"var(--glass-edge)";b.innerHTML=html;}
+function setLive(on,txt){const l=document.getElementById("live");l.classList.toggle("on",on);document.getElementById("livetxt").textContent=txt;}
+let fetching=false;
+async function goLive(manual){if(fetching)return;fetching=true;setLive(false,"Reading the sheet…");
+  try{const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),25000);
+    const res=await fetch(ENDPOINT+"?t="+Date.now(),{signal:ctrl.signal,cache:"no-store"});clearTimeout(t);
+    if(!res.ok)throw new Error("HTTP "+res.status);const data=await res.json();
+    const rows=PERSONA_TABS.flatMap(p=>normalize(p,data[p]||[]));
+    if(!rows.length)throw new Error("empty");
+    state.rows=rows;state.source="live";const stamp=data._updated?new Date(data._updated):new Date();
+    setLive(true,"Live · "+stamp.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}));setBanner(null);renderAll();}
+  catch(e){const msg=String(e&&e.message||e);const why=/403/.test(msg)?"The data feed is set to private (HTTP 403). The sheet owner needs to redeploy the Apps Script with access set to Anyone.":/abort/i.test(msg)?"The sheet took too long to answer.":/empty/.test(msg)?"The sheet came back empty. Check the tab names match the persona names.":"Couldn't reach the sheet ("+msg+").";
+    setBanner(why+" Showing the last snapshot; it retries every minute.","warn");setLive(false,"Snapshot · Nov 6, 2026");}
+  finally{fetching=false;}}
+document.getElementById("refresh").onclick=()=>goLive(true);
+loadSnapshot();renderAll();goLive(false);
+setInterval(()=>{if(!document.hidden)goLive(false);},60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)goLive(false);});
+</script>
+
+</body>
+</html>
