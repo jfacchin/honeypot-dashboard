@@ -142,6 +142,20 @@ tr:hover td{background:rgba(255,255,255,.18)}
 .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .search{font:inherit;font-size:13.5px;padding:9px 14px;border-radius:99px;border:1px solid var(--line);background:var(--chip);color:var(--ink);min-width:200px}
 .search:focus{outline:2px solid var(--pink);outline-offset:1px}
+.mail{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:start}
+.mail:first-child{border-top:0;padding-top:0}
+.mail .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:700 13px/1 var(--f-body);color:#fff;background:var(--c);box-shadow:0 0 0 3px rgba(255,255,255,.35) inset;flex:none}
+.mail .subj{font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mail .from{font-size:12.5px;color:var(--ink-2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail .prev{font-size:13.5px;color:var(--ink-2);margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.mail .when{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);white-space:nowrap;text-align:right}
+.mail .open{margin-top:8px;font-size:12.5px;cursor:pointer;color:var(--pink);background:none;border:0;padding:0;font-weight:600;font-family:inherit}
+.mail .body{margin-top:10px;padding:12px 14px;border-radius:16px;background:var(--chip);border:1px solid var(--line);font-size:13px;white-space:pre-wrap;word-break:break-word;max-height:360px;overflow:auto}
+.mail .links{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.mail .links a{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail .links a:hover{color:var(--pink)}
+.mail-empty{padding:24px 8px;color:var(--ink-2);font-size:14px;max-width:62ch}
+.mail-empty b{color:var(--ink)}
 .tip{position:fixed;z-index:20;pointer-events:none;padding:8px 11px;border-radius:12px;font-size:12.5px;max-width:260px;display:none}
 .tip.show{display:block}
 .tabbar{display:none}
@@ -178,8 +192,9 @@ tr:hover td{background:rgba(255,255,255,.18)}
     <a href="#issues"><span class="dot" style="color:var(--warn)"></span>What's blocking us</a>
     <a href="#recommend"><span class="dot" style="color:var(--good)"></span>Next sign-ups</a>
     <a href="#log"><span class="dot" style="color:var(--violet)"></span>Full log</a>
+    <a href="#inbox"><span class="dot" style="color:var(--yellow)"></span>Inbox</a>
     <div class="foot">
-      <button class="btn secondary" id="refresh" type="button">Refresh from Sheets</button>
+      <button class="btn secondary" id="refresh" type="button">Refresh now</button>
       <button class="btn secondary" id="theme" type="button">Theme: System</button>
       <a class="mono" id="sheetlink" href="https://docs.google.com/spreadsheets/d/1snw2N4wurzZ7fWqs8lklKpGHw6ALYfSa2ef5c3FSglA/edit" target="_blank" rel="noopener" style="padding:6px 10px">Open the Google Sheet ↗</a>
     </div>
@@ -227,11 +242,23 @@ tr:hover td{background:rgba(255,255,255,.18)}
         <div class="tablewrap"><table id="logtable"><thead><tr><th>Date</th><th>Persona</th><th>Site</th><th>Form</th><th>Verified by</th><th>Result</th><th>What happened</th></tr></thead><tbody></tbody></table></div>
       </div>
     </section>
+
+    <section id="inbox">
+      <div class="sec-head"><div><div class="eyebrow">Email funnel</div><h2>Persona <span class="grad">inbox</span></h2><p>Every email the personas receive. Each persona has its own Outlook address, which forwards to a team mailbox; a script pushes each message into Firestore next to the texts, and this page reads it back. Nobody has to log in to any persona account.</p></div><div class="status-line"><span class="live" id="maillive"><i></i><span id="maillivetxt">Reading the inbox…</span></span></div></div>
+      <div class="readouts" id="mailreadouts" style="margin:0 0 14px"></div>
+      <div class="card glass">
+        <div class="filters">
+          <div class="chips" id="mailchips" role="group" aria-label="Filter inbox by persona"></div>
+          <input class="search" id="mailsearch" type="search" placeholder="Search sender, subject or body…" aria-label="Search inbox">
+        </div>
+        <div id="maillist"></div>
+      </div>
+    </section>
   </main>
 </div>
 
 <nav class="tabbar glass" aria-label="Sections">
-  <a href="#overview" class="on">Overview</a><a href="#personas">Personas</a><a href="#issues">Issues</a><a href="#recommend">Next</a><a href="#log">Log</a>
+  <a href="#overview" class="on">Overview</a><a href="#personas">Personas</a><a href="#issues">Issues</a><a href="#recommend">Next</a><a href="#log">Log</a><a href="#inbox">Inbox</a>
 </nav>
 <div class="tip glass" id="tip" role="tooltip"></div>
 
@@ -437,6 +464,40 @@ function renderLog(){const chips=document.getElementById("logchips");const opts=
 
 function renderAll(){renderKpis();renderPersonas();renderIssues();renderRecs();renderLog();}
 
+/* ---------- inbox: emails from Firestore via the Cloud Run read endpoint ---------- */
+const EMAIL_ENDPOINT="https://inbound-email-385061153681.us-west1.run.app/";
+state.emails=[];state.mailFilter="ALL";state.mailQ="";state.mailOpen=new Set();state.mailErr=null;state.mailStamp=null;
+function mailWhen(iso){if(!iso)return"";const d=new Date(iso);const now=new Date();const same=d.toDateString()===now.toDateString();return same?d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"})+" · "+d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});}
+function mailSender(from){const m=/^"?([^"<]*?)"?\s*<([^>]+)>/.exec(from||"");return m?{name:m[1].trim()||m[2],addr:m[2]}:{name:from||"unknown sender",addr:from||""};}
+function renderInbox(){
+  const all=state.emails;const personas=["ALL",...PERSONA_TABS,"unknown"];
+  const chips=document.getElementById("mailchips");chips.innerHTML=personas.filter(p=>p!=="unknown"||all.some(e=>e.persona==="unknown")).map(p=>`<button class="chip" type="button" data-v="${p}" aria-pressed="${state.mailFilter===p}">${p==="ALL"?"All":p==="unknown"?"Unmatched":p.split(" ")[0]}<span class="mono" style="margin-left:6px">${p==="ALL"?all.length:all.filter(e=>e.persona===p).length}</span></button>`).join("");
+  chips.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{state.mailFilter=b.dataset.v;renderInbox();});
+  const last=all[0];const senders=new Set(all.map(e=>mailSender(e.from).addr.split("@")[1]||""));
+  document.getElementById("mailreadouts").innerHTML=[["Emails",all.length],["Sender domains",senders.size],["Last received",last?mailWhen(last.receivedAt):"\u2014"],["With links",all.filter(e=>e.links&&e.links.length).length]].map(([l,v])=>`<div class="readout glass"><span class="l">${l}</span><span class="v" style="font-size:${String(v).length>8?"13px":"18px"}">${esc(String(v))}</span></div>`).join("");
+  const q=state.mailQ.toLowerCase();
+  const rows=all.filter(e=>(state.mailFilter==="ALL"||e.persona===state.mailFilter)&&(!q||(e.from+" "+e.subject+" "+e.body+" "+e.persona).toLowerCase().includes(q)));
+  const list=document.getElementById("maillist");
+  if(state.mailErr&&!all.length){list.innerHTML=`<div class="mail-empty"><b>Can't reach the inbox feed.</b> ${esc(state.mailErr)} It retries every minute.</div>`;return;}
+  if(!all.length){list.innerHTML=`<div class="mail-empty"><b>No emails yet.</b> Mail shows up here once the hub Outlook (honeypot.cs) is forwarding to the team Gmail and the personas' Outlook addresses are used on sign-ups. Old Gmail and Yahoo sign-ups can't be collected.</div>`;return;}
+  if(!rows.length){list.innerHTML=`<div class="mail-empty">Nothing matches.</div>`;return;}
+  list.innerHTML=rows.map(e=>{const m=PERSONA_META[e.persona];const col=m?m.color:"var(--skip)";const s=mailSender(e.from);const open=state.mailOpen.has(e.id);const ini=(e.persona||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+    return`<div class="mail" style="--c:${col}"><div class="av" title="${esc(e.persona)}">${esc(ini)}</div><div style="min-width:0"><div class="subj">${esc(e.subject||"(no subject)")}${e.hasAttachments?`<span class="pill"><i></i>attachment</span>`:""}${e.links&&e.links.length?`<span class="mono">${e.links.length} link${e.links.length>1?"s":""}</span>`:""}</div><div class="from" title="${esc(e.from)}">${esc(s.name)} · ${esc(s.addr)} \u2192 ${esc(e.persona)}</div>
+    ${open?`<div class="body">${esc(e.body||"(empty)")}</div>${e.links&&e.links.length?`<div class="links">${e.links.map(l=>`<a href="${esc(l)}" target="_blank" rel="noopener nofollow">${esc(l)}</a>`).join("")}</div>`:""}`:`<div class="prev">${esc((e.body||"").replace(/\s+/g," ").slice(0,240))}</div>`}
+    <button class="open" type="button" data-id="${esc(e.id)}">${open?"Hide":"Read the email"}</button></div><div class="when">${esc(mailWhen(e.sentAt||e.receivedAt))}</div></div>`;}).join("");
+  list.querySelectorAll(".open").forEach(b=>b.onclick=()=>{const id=b.dataset.id;state.mailOpen.has(id)?state.mailOpen.delete(id):state.mailOpen.add(id);renderInbox();});
+}
+let mailFetching=false;
+async function loadEmails(){if(mailFetching)return;mailFetching=true;const l=document.getElementById("maillive");
+  try{const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),20000);
+    const res=await fetch(EMAIL_ENDPOINT+"?t="+Date.now(),{signal:ctrl.signal,cache:"no-store"});clearTimeout(t);
+    if(!res.ok)throw new Error("HTTP "+res.status);const data=await res.json();
+    state.emails=(data.emails||[]).sort((a,b)=>String(b.receivedAt||"").localeCompare(String(a.receivedAt||"")));state.mailErr=null;state.mailStamp=data._updated;
+    l.classList.add("on");document.getElementById("maillivetxt").textContent="Live · "+new Date(data._updated||Date.now()).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});}
+  catch(e){state.mailErr=String(e&&e.message||e);l.classList.remove("on");document.getElementById("maillivetxt").textContent="Inbox feed unreachable";}
+  finally{mailFetching=false;renderInbox();}}
+document.getElementById("mailsearch").addEventListener("input",e=>{state.mailQ=e.target.value;renderInbox();});
+
 /* ---------- tooltips ---------- */
 const tip=document.getElementById("tip");
 document.addEventListener("mouseover",e=>{const t=e.target.closest("[data-tip]");if(!t)return;tip.textContent=t.dataset.tip;tip.classList.add("show");});
@@ -467,10 +528,10 @@ async function goLive(manual){if(fetching)return;fetching=true;setLive(false,"Re
   catch(e){const msg=String(e&&e.message||e);const why=/403/.test(msg)?"The data feed is set to private (HTTP 403). The sheet owner needs to redeploy the Apps Script with access set to Anyone.":/abort/i.test(msg)?"The sheet took too long to answer.":/empty/.test(msg)?"The sheet came back empty. Check the tab names match the persona names.":"Couldn't reach the sheet ("+msg+").";
     setBanner(why+" Showing the last snapshot; it retries every minute.","warn");setLive(false,"Snapshot · Nov 6, 2026");}
   finally{fetching=false;}}
-document.getElementById("refresh").onclick=()=>goLive(true);
-loadSnapshot();renderAll();goLive(false);
-setInterval(()=>{if(!document.hidden)goLive(false);},60000);
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)goLive(false);});
+document.getElementById("refresh").onclick=()=>{goLive(true);loadEmails();};
+loadSnapshot();renderAll();goLive(false);renderInbox();loadEmails();
+setInterval(()=>{if(!document.hidden){goLive(false);loadEmails();}},60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){goLive(false);loadEmails();}});
 </script>
 
 </body>
