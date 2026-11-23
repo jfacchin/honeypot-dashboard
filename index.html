@@ -219,7 +219,6 @@ tr:hover td{background:rgba(255,255,255,.18)}
 
     <section id="personas">
       <div class="sec-head"><div><div class="eyebrow">Coverage by persona</div><h2>Coverage by persona</h2><p>Each persona has one research phone number and one email address.</p></div></div>
-      <div id="mailalert" hidden></div>
       <div class="grid" id="ptiles"></div>
     </section>
 
@@ -280,23 +279,16 @@ function renderKpis(){const s=state.stats;if(!s)return;const t=s.totals;const m=
    <div class="bottom"><div><div class="big num">${x.big}<small>${x.unit}</small></div>${x.extra||""}</div>${x.dots||""}</div></div>`).join("");}
 
 function renderPersonas(){const s=state.stats;if(!s)return;
-  const stale=[];
   const html=PERSONAS.map((p,i)=>{const d=s.personas[p.k]||{tried:0,confirmed:0,counts:{},covered:0,targets:0};
     const em=mailOf(p.k),sm=smsOf(p.k);const ago=daysSince(em.last);
-    let chip="";
-    if(state.mail){if(ago===null||ago>=ALERT_DAYS){stale.push(p.k);chip=`<div class="alert-chip">⚠ ${ago===null?"No email yet":`No email in ${ago} days`}, check forwarding</div>`;}
-      else chip=`<div class="ok-chip">● Last email ${ago===0?"today":ago===1?"yesterday":ago+" days ago"}</div>`;}
     return`<div class="tile ${p.tile} ${i<2?"wide":""} rise" style="--tile-base:${p.base};--tile-orb:${p.orb};animation-delay:${i*.05}s;grid-row:span 1"><div class="bg"></div>
      <div class="top"><div><div class="label">${p.k}</div><div class="sub">${p.cat}</div></div><div class="idx">${p.idx}</div></div>
      <div><div class="bottom"><div class="big num">${d.confirmed}<small>confirmed</small></div><div style="text-align:right"><div class="mono" style="color:inherit;opacity:.75">${d.tried} tried · ${d.covered}/${d.targets} targets</div>${dots(d.covered,d.targets)}</div></div>
      <div class="counts"><span><b>${state.mail?em.count:"–"}</b>emails</span><span><b>${state.mail?sm.count:"–"}</b>texts</span></div>
-     ${d.tried?`<div style="margin-top:8px">${segBar(d.counts,d.tried)}</div>`:`<div class="sub" style="margin-top:8px">No attempts logged yet</div>`}
-     ${chip}</div></div>`;}).join("");
+     ${d.tried?`<div style="margin-top:8px">${segBar(d.counts,d.tried)}</div>`:`<div class="sub" style="margin-top:8px">No attempts logged yet</div>`}</div></div>`;}).join("");
   document.getElementById("ptiles").innerHTML=html+
-   `<div class="card glass wide rise" style="grid-column:span 2;display:flex;flex-direction:column;justify-content:center;gap:8px;animation-delay:.3s"><div class="eyebrow">Legend</div><div class="legend">${RES_ORDER.map(k=>`<span><i style="background:${RES_COLOR[k]}"></i>${RES_WORD[k]} (${k})</span>`).join("")}</div><div class="mono">Dots = target sites covered. A red tag means that persona hasn't received an email in ${ALERT_DAYS}+ days; Outlook has probably paused its forwarding.</div></div>`;
-  const a=document.getElementById("mailalert");
-  if(stale.length){a.hidden=false;a.className="alertbox glass";a.innerHTML=`<b>Email check:</b> ${esc(stale.join(", "))} ${stale.length>1?"haven't":"hasn't"} received an email in ${ALERT_DAYS}+ days. Open that Outlook account → Settings → Mail → Forwarding. If it says "Sign in and verify", verify and save. Also check the hub (honeypot.cs).`;}
-  else a.hidden=true;}
+   `<div class="card glass wide rise" style="grid-column:span 2;display:flex;flex-direction:column;justify-content:center;gap:8px;animation-delay:.3s"><div class="eyebrow">Legend</div><div class="legend">${RES_ORDER.map(k=>`<span><i style="background:${RES_COLOR[k]}"></i>${RES_WORD[k]} (${k})</span>`).join("")}</div><div class="mono">Dots = target sites covered.</div></div>`;
+}
 
 function rankedBars(el,items){el.innerHTML=items&&items.length?items.map(x=>{const pct=Math.round(x.yes/x.n*100);const col=pct>=70?"var(--good)":pct>=40?"var(--warn)":"var(--bad)";return`<div class="bar"><div class="name"><span>${esc(x.k)}</span><small>${x.yes} of ${x.n} confirmed</small></div><div class="track" data-tip="${esc(x.k)}: ${x.yes} of ${x.n} (${pct}%)"><div class="fill" style="width:${pct}%;background:${col}"></div></div><div class="v">${pct}<span style="font:600 11px var(--f-body)">%</span></div></div>`}).join(""):`<div class="mono">Not enough data yet</div>`;}
 function renderRates(){const s=state.stats;if(!s)return;rankedBars(document.getElementById("formbars"),s.formRates);rankedBars(document.getElementById("verifybars"),s.verifyRates);}
